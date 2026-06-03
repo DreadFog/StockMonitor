@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero card">
+  <h1>Raw Product Price Monitoring</h1>
+  <p>Track invoice history, price evolution, and prepare shopping lists.</p>
+</section>
+
+<section class="grid cards-4">
+  <article class="card metric">
+    <h2>{{ stats.products }}</h2>
+    <p>Products</p>
+  </article>
+  <article class="card metric">
+    <h2>{{ stats.invoices }}</h2>
+    <p>Invoices</p>
+  </article>
+  <article class="card metric">
+    <h2>{{ stats.entries }}</h2>
+    <p>Invoice Entries</p>
+  </article>
+  <article class="card metric">
+    <h2>{{ "%.2f"|format(stats.latest_total) }} €</h2>
+    <p>Sum of Invoice Totals</p>
+  </article>
+</section>
+{% endblock %}

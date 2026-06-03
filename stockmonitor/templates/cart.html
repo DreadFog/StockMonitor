@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <h1>Shopping List</h1>
+  <p>Estimated total based on latest known prices: <strong>{{ "%.2f"|format(estimated_total) }} €</strong></p>
+  <form method="post" action="{{ url_for('web.cart_empty') }}" onsubmit="return confirm('Empty the full cart?');">
+    <button class="btn ghost" type="submit">Empty Cart</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Add Product</h2>
+  <form method="get" class="inline-form">
+    <input type="text" name="q" value="{{ search }}" placeholder="Search products by name or article ID">
+    <button class="btn" type="submit">Search</button>
+  </form>
+
+  {% if product_results %}
+  <table>
+    <thead>
+      <tr><th>Shop</th><th>Product</th><th>Latest Price</th><th>Add</th></tr>
+    </thead>
+    <tbody>
+      {% for product in product_results %}
+      <tr>
+        <td>{{ product.shop or '-' }}</td>
+        <td>
+          {{ product.natural_name or product.source_name }} ({{ product.article_id }})
+          {% if product.pack_size and product.pack_size > 1 %}<small class="muted">&nbsp;pack×{{ product.pack_size }}</small>{% endif %}
+        </td>
+        <td>{{ "%.3f"|format(product.latest_unit_price or 0) }} €{% if product.pack_size and product.pack_size > 1 %}<small class="muted">&nbsp;/pack</small>{% endif %}</td>
+        <td>
+          <form method="post" action="{{ url_for('web.cart_add') }}" class="inline-form">
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+            <input type="number" name="quantity" step="0.001" min="0.001" value="1" required>
+            <button class="btn" type="submit">Add</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+
+{% if shop_groups %}
+  {% for group in shop_groups %}
+  <section class="card">
+    <h2>{{ group["shop"] }}</h2>
+    <p>Expected total for this shop: <strong>{{ "%.2f"|format(group["subtotal"]) }} €</strong></p>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Qty</th><th>Unit Price</th><th>Total</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for item in group["items"] %}
+        <tr>
+          <td>
+            {{ item.product.natural_name or item.product.source_name }}
+            {% if item.product.pack_size and item.product.pack_size > 1 %}<small class="muted">&nbsp;(pack×{{ item.product.pack_size }})</small>{% endif %}
+          </td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ "%.3f"|format(item.unit_price_snapshot) }} €{% if item.product.pack_size and item.product.pack_size > 1 %}<small class="muted">&nbsp;/pack</small>{% endif %}</td>
+          <td>{{ "%.2f"|format(item.quantity * item.unit_price_snapshot) }} €</td>
+          <td>
+            <form method="post" action="{{ url_for('web.cart_remove', item_id=item.id) }}">
+              <button class="btn ghost" type="submit">Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endfor %}
+{% else %}
+  <section class="card">
+    <h2>Current Items</h2>
+    <p>No item in cart.</p>
+  </section>
+{% endif %}
+{% endblock %}

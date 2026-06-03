@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <h1>{{ product.natural_name or product.source_name }}</h1>
+  <p>Article ID: <strong>{{ product.article_id }}</strong></p>
+  {% if product.pack_size and product.pack_size > 1 %}
+  <p>Pack size: <strong>{{ product.pack_size }} units/pack</strong></p>
+  <p>Latest pack price: <strong>{{ "%.3f"|format(product.latest_unit_price or 0) }} €</strong> ({{ "%.3f"|format((product.latest_unit_price or 0) / product.pack_size) }} € per unit)</p>
+  {% else %}
+  <p>Latest price: <strong>{{ "%.3f"|format(product.latest_unit_price or 0) }} €</strong></p>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('web.rename_product', product_id=product.id) }}" class="inline-form">
+    <input type="text" name="natural_name" value="{{ product.natural_name or '' }}" placeholder="Natural name">
+    <button class="btn" type="submit">Rename</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Price Evolution</h2>
+  <div class="chart-wrap">
+    <canvas id="priceChart"></canvas>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Purchase History</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Qty ordered</th>
+        <th>Pack size</th>
+        <th>Unit price</th>
+        <th>Pack price</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in entries %}
+      <tr>
+        <td>{{ entry.invoice.invoice_date }}</td>
+        <td>{{ entry.quantity }}</td>
+        <td>{{ entry.colisage }}</td>
+        <td>{{ "%.3f"|format(entry.unit_price) }} €</td>
+        <td>{{ "%.3f"|format(entry.unit_price * entry.colisage) }} €</td>
+        <td>{{ "%.2f"|format(entry.total_price) }} €</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">No history yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const timeline = {{ timeline|tojson }};
+  const labels = timeline.map(x => x.date);
+  const values = timeline.map(x => x.pack_price);
+
+  const ctx = document.getElementById('priceChart');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Pack Price (€)',
+        data: values,
+        borderWidth: 2,
+        borderColor: '#db5a2b',
+        backgroundColor: 'rgba(219, 90, 43, 0.2)',
+        fill: true,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: false,
+          grace: '5%'
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}

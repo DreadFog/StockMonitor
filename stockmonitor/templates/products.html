@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <h1>Products</h1>
+  <form method="get" class="inline-form">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search by name or article ID">
+    <button type="submit" class="btn">Search</button>
+  </form>
+</section>
+
+<section class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Article ID</th>
+        <th>Shop</th>
+        <th>Name</th>
+        <th>Latest Price</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for product in products %}
+      <tr>
+        <td>{{ product.article_id }}</td>
+        <td>{{ product.shop or '-' }}</td>
+        <td>{{ product.natural_name or product.source_name }}</td>
+        <td>{{ "%.3f"|format(product.latest_unit_price or 0) }} €</td>
+        <td><a href="{{ url_for('web.product_detail', product_id=product.id) }}">Details</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">No products yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

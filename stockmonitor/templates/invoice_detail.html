@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <h1>Invoice #{{ invoice.id }}</h1>
+  <p>Type: <strong>{{ invoice.parser_type }}</strong></p>
+  <p>Date: <strong>{{ invoice.invoice_date }}</strong></p>
+  <p>Total: <strong>{{ "%.2f"|format(invoice.total_price) }} €</strong></p>
+  <div class="inline-form">
+    <a class="btn" href="{{ url_for('web.invoice_pdf', invoice_id=invoice.id) }}" target="_blank">Open Raw PDF</a>
+    <form method="post" action="{{ url_for('web.delete_invoice_page', invoice_id=invoice.id) }}" onsubmit="return confirm('Delete this invoice?');">
+      <button class="btn ghost" type="submit">Delete Invoice</button>
+    </form>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Parsed Entries</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Article ID</th>
+        <th>Shop</th>
+        <th>Name</th>
+        <th>Qty ordered</th>
+        <th>Pack size</th>
+        <th>Unit price</th>
+        <th>Pack price</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in invoice.entries %}
+      <tr>
+        <td>{{ entry.article_id }}</td>
+        <td>{{ entry.product.shop or '-' }}</td>
+        <td>{{ entry.product.natural_name or entry.product.source_name }}</td>
+        <td>{{ entry.quantity }}</td>
+        <td>{{ entry.colisage }}</td>
+        <td>{{ "%.3f"|format(entry.unit_price) }} €</td>
+        <td>{{ "%.3f"|format(entry.unit_price * entry.colisage) }} €</td>
+        <td>{{ "%.2f"|format(entry.total_price) }} €</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">No parsed entries.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

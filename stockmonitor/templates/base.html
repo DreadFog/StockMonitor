@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StockMonitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <div class="bg-pattern"></div>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('web.dashboard') }}">StockMonitor</a>
+    {% if session.get('user_id') %}
+      <nav class="navlinks">
+        <a href="{{ url_for('web.invoices') }}">Invoices</a>
+        <a href="{{ url_for('web.products') }}">Products</a>
+        <a href="{{ url_for('web.cart_page') }}">Shopping List</a>
+      </nav>
+      <form method="post" action="{{ url_for('web.logout') }}">
+        <button type="submit" class="btn ghost">Logout</button>
+      </form>
+    {% endif %}
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section class="alerts">
+          {% for category, message in messages %}
+            <div class="alert {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    container_name: stockmonitor-web
+    ports:
+      - "5010:5000"
+    env_file:
+      - .env
+    volumes:
+      - ./instance:/app/instance
+    restart: unless-stopped

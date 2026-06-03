@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <h1>Invoices</h1>
+  <form method="post" enctype="multipart/form-data" class="inline-form">
+    <input type="file" name="file" accept="application/pdf" required>
+    <button class="btn" type="submit">Upload PDF</button>
+  </form>
+</section>
+
+<section class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Type</th>
+        <th>Date</th>
+        <th>Total</th>
+        <th>Structured</th>
+        <th>Raw PDF</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for invoice in invoices %}
+      <tr>
+        <td>{{ invoice.id }}</td>
+        <td>{{ invoice.parser_type }}</td>
+        <td>{{ invoice.invoice_date }}</td>
+        <td>{{ "%.2f"|format(invoice.total_price) }} €</td>
+        <td><a href="{{ url_for('web.invoice_detail_page', invoice_id=invoice.id) }}">View Entries</a></td>
+        <td><a href="{{ url_for('web.invoice_pdf', invoice_id=invoice.id) }}" target="_blank">Open PDF</a></td>
+        <td>
+          <form method="post" action="{{ url_for('web.delete_invoice_page', invoice_id=invoice.id) }}" onsubmit="return confirm('Delete this invoice?');">
+            <button class="btn ghost" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7">No invoices yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
