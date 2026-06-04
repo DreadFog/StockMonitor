@@ -4,7 +4,7 @@ StockMonitor is a dockerized Flask web app used by pizzerias to monitor raw prod
 
 ## Features
 
-- PDF parser architecture with parser strategies per supplier (`metro`, `carigel` currently).
+- PDF parser architecture with parser strategies per supplier.
 - Authenticated API using `@require_auth` for protected endpoints.
 - Default user pre-seeded from environment variables.
 - Products with source name, editable natural name, and latest known unit price.

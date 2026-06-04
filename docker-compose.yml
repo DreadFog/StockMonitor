@@ -8,4 +8,5 @@ services:
       - .env
     volumes:
       - ./instance:/app/instance
+      - ./parsers:/app/parsers
     restart: unless-stopped

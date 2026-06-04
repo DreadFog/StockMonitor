@@ -8,7 +8,7 @@ class ParsedEntry:
     article_id: str
     product_name: str
     quantity: float
-    colisage: int
+    colisage: float
     unit_price: float
     total_price: float
 

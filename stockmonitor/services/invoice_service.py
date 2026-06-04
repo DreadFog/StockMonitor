@@ -14,14 +14,21 @@ def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
     return "\n".join(page.extract_text() or "" for page in reader.pages)
 
 
-def parse_and_store_invoice(filename: str, pdf_bytes: bytes) -> tuple[Invoice, bool]:
+def parse_and_store_invoice(
+    filename: str,
+    pdf_bytes: bytes,
+    parser_type: str | None = None,
+) -> tuple[Invoice, bool]:
     content_hash = sha256(pdf_bytes).hexdigest()
     existing_invoice = Invoice.query.filter_by(pdf_sha256=content_hash).first()
     if existing_invoice is not None:
         return existing_invoice, False
 
     text = extract_text_from_pdf_bytes(pdf_bytes)
-    parser = registry.detect_parser(text)
+    if parser_type:
+        parser = registry.get_parser(parser_type)
+    else:
+        parser = registry.detect_parser(text)
     parsed = parser.parse(text)
 
     invoice = Invoice(

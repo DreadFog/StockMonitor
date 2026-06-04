@@ -29,7 +29,7 @@ def _ensure_runtime_schema():
             db.session.rollback()
     if "pack_size" not in product_columns:
         try:
-            db.session.execute(text("ALTER TABLE products ADD COLUMN pack_size INTEGER NOT NULL DEFAULT 1"))
+            db.session.execute(text("ALTER TABLE products ADD COLUMN pack_size FLOAT NOT NULL DEFAULT 1"))
             db.session.commit()
         except SQLAlchemyError:
             db.session.rollback()
@@ -63,7 +63,7 @@ def _ensure_runtime_schema():
             entry_columns = {column["name"] for column in inspector.get_columns("invoice_entries")}
             if "colisage" not in entry_columns:
                 try:
-                    db.session.execute(text("ALTER TABLE invoice_entries ADD COLUMN colisage INTEGER NOT NULL DEFAULT 1"))
+                    db.session.execute(text("ALTER TABLE invoice_entries ADD COLUMN colisage FLOAT NOT NULL DEFAULT 1"))
                     db.session.commit()
                 except SQLAlchemyError:
                     db.session.rollback()

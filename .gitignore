@@ -68,6 +68,11 @@ db.sqlite3-journal
 instance/
 .webassets-cache
 
+# Local parser configurations (supplier-specific)
+parsers/*.json
+!parsers/*.example.json
+!parsers/README.md
+
 # Scrapy stuff:
 .scrapy
 

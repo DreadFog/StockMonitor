@@ -6,6 +6,7 @@ from sqlalchemy import func, or_
 from ..auth import issue_token, require_login, verify_password
 from ..extensions import db
 from ..models import Cart, CartItem, Invoice, InvoiceEntry, Product, User
+from ..pdf_parsers import registry as parser_registry
 from ..services.invoice_service import delete_invoice_and_recalculate, parse_and_store_invoice
 
 web_bp = Blueprint("web", __name__)
@@ -69,8 +70,11 @@ def invoices():
             flash("Please upload a PDF file", "error")
             return redirect(url_for("web.invoices"))
 
+        raw_parser_type = (request.form.get("parser_type") or "").strip()
+        parser_type = raw_parser_type or None
+
         try:
-            _, created = parse_and_store_invoice(file.filename, file.read())
+            _, created = parse_and_store_invoice(file.filename, file.read(), parser_type=parser_type)
             if created:
                 flash("Invoice parsed and saved", "success")
             else:
@@ -80,7 +84,16 @@ def invoices():
         return redirect(url_for("web.invoices"))
 
     invoices_data = Invoice.query.order_by(Invoice.invoice_date.desc(), Invoice.id.desc()).all()
-    return render_template("invoices.html", invoices=invoices_data)
+    try:
+        available_parsers = parser_registry.list_parsers()
+    except Exception as exc:
+        available_parsers = []
+        flash(f"Parser configurations could not be loaded: {exc}", "error")
+    return render_template(
+        "invoices.html",
+        invoices=invoices_data,
+        available_parsers=available_parsers,
+    )
 
 
 @web_bp.get("/invoices/<int:invoice_id>/pdf")

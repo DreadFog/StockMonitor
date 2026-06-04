@@ -5,6 +5,12 @@
   <h1>Invoices</h1>
   <form method="post" enctype="multipart/form-data" class="inline-form">
     <input type="file" name="file" accept="application/pdf" required>
+    <select name="parser_type">
+      <option value="">Auto-detect</option>
+      {% for parser in available_parsers %}
+      <option value="{{ parser.parser_type }}">{{ parser.display_name }}</option>
+      {% endfor %}
+    </select>
     <button class="btn" type="submit">Upload PDF</button>
   </form>
 </section>

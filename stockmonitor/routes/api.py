@@ -4,6 +4,7 @@ from sqlalchemy import or_
 from ..auth import issue_token, require_auth, verify_password
 from ..extensions import db
 from ..models import Cart, CartItem, Invoice, InvoiceEntry, Product, User
+from ..pdf_parsers import registry as parser_registry
 from ..services.invoice_service import delete_invoice_and_recalculate, parse_and_store_invoice
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -66,14 +67,28 @@ def upload_invoice():
     if not file.filename.lower().endswith(".pdf"):
         return jsonify({"error": "Only PDF is supported"}), 400
 
+    raw_parser_type = (request.form.get("parser_type") or "").strip()
+    parser_type = raw_parser_type or None
+
     try:
-        invoice, created = parse_and_store_invoice(file.filename, file.read())
+        invoice, created = parse_and_store_invoice(
+            file.filename, file.read(), parser_type=parser_type
+        )
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
 
     payload = _invoice_to_dict(invoice)
     payload["already_exists"] = not created
     return jsonify(payload), 201 if created else 200
+
+
+@api_bp.get("/parsers")
+@require_auth
+def list_parsers():
+    try:
+        return jsonify(parser_registry.list_parsers())
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 @api_bp.get("/invoices")

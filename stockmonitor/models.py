@@ -20,7 +20,7 @@ class Product(db.Model):
     shop = db.Column(db.String(80), nullable=True, index=True)
     source_name = db.Column(db.String(255), nullable=False)
     natural_name = db.Column(db.String(255), nullable=True)
-    pack_size = db.Column(db.Integer, nullable=False, default=1)
+    pack_size = db.Column(db.Float, nullable=False, default=1)
     latest_unit_price = db.Column(db.Float, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -51,7 +51,7 @@ class InvoiceEntry(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
     article_id = db.Column(db.String(120), nullable=False)
     quantity = db.Column(db.Float, nullable=False)
-    colisage = db.Column(db.Integer, nullable=False, default=1)
+    colisage = db.Column(db.Float, nullable=False, default=1)
     unit_price = db.Column(db.Float, nullable=False)
     total_price = db.Column(db.Float, nullable=False)
 
