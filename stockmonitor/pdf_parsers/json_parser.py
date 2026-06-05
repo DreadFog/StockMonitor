@@ -199,6 +199,12 @@ class JsonConfigParser(BaseParser):
         for transform_name in self.entry_transforms:
             raw = ENTRY_TRANSFORMS[transform_name](raw)
         product_name = _coerce("product_name", raw.get("product_name"))
+        ean_raw = raw.get("ean")
+        ean = None
+        if ean_raw is not None:
+            candidate = str(ean_raw).strip()
+            if candidate:
+                ean = candidate
         return ParsedEntry(
             article_id=_coerce("article_id", raw.get("article_id")),
             product_name=" ".join(product_name.split()),
@@ -206,6 +212,7 @@ class JsonConfigParser(BaseParser):
             colisage=_coerce("colisage", raw.get("colisage")),
             unit_price=_coerce("unit_price", raw.get("unit_price")),
             total_price=_coerce("total_price", raw.get("total_price")),
+            ean=ean,
         )
 
     # ----------------------------------------------------------------- strategies
@@ -224,6 +231,9 @@ class JsonConfigParser(BaseParser):
                 continue
             raw = dict(match.groupdict())
             raw["article_id"] = anchor.group("article_id")
+            for key, value in anchor.groupdict().items():
+                if key not in raw and value is not None:
+                    raw[key] = value
             entries.append(self._build_entry(raw))
         return entries
 

@@ -20,7 +20,34 @@ def _ensure_runtime_schema():
     if "products" not in table_names:
         return
 
+    if "users" in table_names:
+        user_columns = {column["name"] for column in inspector.get_columns("users")}
+        if "mobile_view" not in user_columns:
+            try:
+                db.session.execute(text("ALTER TABLE users ADD COLUMN mobile_view BOOLEAN NOT NULL DEFAULT 0"))
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+
     product_columns = {column["name"] for column in inspector.get_columns("products")}
+    if "ean" not in product_columns:
+        try:
+            db.session.execute(text("ALTER TABLE products ADD COLUMN ean VARCHAR(13)"))
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+    if "image_url" not in product_columns:
+        try:
+            db.session.execute(text("ALTER TABLE products ADD COLUMN image_url VARCHAR(500)"))
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+    if "starred" not in product_columns:
+        try:
+            db.session.execute(text("ALTER TABLE products ADD COLUMN starred BOOLEAN NOT NULL DEFAULT 0"))
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
     if "shop" not in product_columns:
         try:
             db.session.execute(text("ALTER TABLE products ADD COLUMN shop VARCHAR(80)"))
@@ -61,6 +88,12 @@ def _ensure_runtime_schema():
 
         if "invoice_entries" in table_names:
             entry_columns = {column["name"] for column in inspector.get_columns("invoice_entries")}
+            if "ean" not in entry_columns:
+                try:
+                    db.session.execute(text("ALTER TABLE invoice_entries ADD COLUMN ean VARCHAR(13)"))
+                    db.session.commit()
+                except SQLAlchemyError:
+                    db.session.rollback()
             if "colisage" not in entry_columns:
                 try:
                     db.session.execute(text("ALTER TABLE invoice_entries ADD COLUMN colisage FLOAT NOT NULL DEFAULT 1"))
@@ -120,6 +153,19 @@ def create_app() -> Flask:
 
     db.init_app(app)
     register_auth_helpers(app)
+
+    @app.context_processor
+    def _inject_current_user():
+        from flask import g, session as flask_session
+
+        from .models import User
+
+        user = getattr(g, "current_user", None)
+        if user is None:
+            user_id = flask_session.get("user_id")
+            if user_id:
+                user = User.query.get(user_id)
+        return {"current_user": user}
 
     with app.app_context():
         db.create_all()

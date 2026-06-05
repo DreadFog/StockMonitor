@@ -1,20 +1,35 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="card">
-  <h1>{{ product.natural_name or product.source_name }}</h1>
-  <p>Article ID: <strong>{{ product.article_id }}</strong></p>
-  {% if product.pack_size and product.pack_size > 1 %}
-  <p>Pack size: <strong>{{ product.pack_size }} units/pack</strong></p>
-  <p>Latest pack price: <strong>{{ "%.3f"|format(product.latest_unit_price or 0) }} €</strong> ({{ "%.3f"|format((product.latest_unit_price or 0) / product.pack_size) }} € per unit)</p>
-  {% else %}
-  <p>Latest price: <strong>{{ "%.3f"|format(product.latest_unit_price or 0) }} €</strong></p>
+<section class="card product-hero">
+  {% if product.image_url or product.ean %}
+  <img class="product-image" src="{{ url_for('web.product_image', product_id=product.id) }}" alt="" loading="lazy" onerror="this.style.display='none'">
   {% endif %}
+  <div class="product-hero-body">
+    <h1>
+      {{ product.natural_name or product.source_name }}
+    </h1>
+    <p>Article ID: <strong>{{ product.article_id }}</strong></p>
+    {% if product.ean %}<p>EAN: <strong>{{ product.ean }}</strong></p>{% endif %}
+    {% if product.pack_size and product.pack_size > 1 %}
+    <p>Pack size: <strong>{{ product.pack_size }} units/pack</strong></p>
+    <p>Latest pack price: <strong>{{ "%.3f"|format(product.latest_unit_price or 0) }} &euro;</strong> ({{ "%.3f"|format((product.latest_unit_price or 0) / product.pack_size) }} &euro; per unit)</p>
+    {% else %}
+    <p>Latest price: <strong>{{ "%.3f"|format(product.latest_unit_price or 0) }} &euro;</strong></p>
+    {% endif %}
 
-  <form method="post" action="{{ url_for('web.rename_product', product_id=product.id) }}" class="inline-form">
-    <input type="text" name="natural_name" value="{{ product.natural_name or '' }}" placeholder="Natural name">
-    <button class="btn" type="submit">Rename</button>
-  </form>
+    <form method="post" action="{{ url_for('web.rename_product', product_id=product.id) }}" class="inline-form">
+      <input type="text" name="natural_name" value="{{ product.natural_name or '' }}" placeholder="Natural name">
+      <button class="btn" type="submit">Rename</button>
+    </form>
+
+    <form method="post" action="{{ url_for('web.toggle_star', product_id=product.id) }}" class="inline-form">
+      <input type="hidden" name="next" value="{{ request.full_path }}">
+      <button class="btn ghost" type="submit">
+        {% if product.starred %}&#9733; Unstar{% else %}&#9734; Star{% endif %}
+      </button>
+    </form>
+  </div>
 </section>
 
 <section class="card">

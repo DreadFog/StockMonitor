@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
-<body>
+<body class="{% if current_user and current_user.mobile_view %}is-mobile-view{% endif %}">
   <div class="bg-pattern"></div>
   <header class="topbar">
     <a class="brand" href="{{ url_for('web.dashboard') }}">StockMonitor</a>
@@ -19,6 +19,12 @@
         <a href="{{ url_for('web.products') }}">Products</a>
         <a href="{{ url_for('web.cart_page') }}">Shopping List</a>
       </nav>
+      <form method="post" action="{{ url_for('web.toggle_mobile_view') }}" class="inline-form">
+        <input type="hidden" name="next" value="{{ request.full_path if request and request.full_path else '/' }}">
+        <button type="submit" class="btn ghost" title="Toggle mobile view">
+          {% if current_user and current_user.mobile_view %}Desktop view{% else %}Mobile view{% endif %}
+        </button>
+      </form>
       <form method="post" action="{{ url_for('web.logout') }}">
         <button type="submit" class="btn ghost">Logout</button>
       </form>

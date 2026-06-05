@@ -9,6 +9,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    mobile_view = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 
@@ -17,10 +18,13 @@ class Product(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     article_id = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    ean = db.Column(db.String(13), nullable=True, index=True)
     shop = db.Column(db.String(80), nullable=True, index=True)
     source_name = db.Column(db.String(255), nullable=False)
     natural_name = db.Column(db.String(255), nullable=True)
     pack_size = db.Column(db.Float, nullable=False, default=1)
+    image_url = db.Column(db.String(500), nullable=True)
+    starred = db.Column(db.Boolean, nullable=False, default=False, index=True)
     latest_unit_price = db.Column(db.Float, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -50,6 +54,7 @@ class InvoiceEntry(db.Model):
     invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id"), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
     article_id = db.Column(db.String(120), nullable=False)
+    ean = db.Column(db.String(13), nullable=True, index=True)
     quantity = db.Column(db.Float, nullable=False)
     colisage = db.Column(db.Float, nullable=False, default=1)
     unit_price = db.Column(db.Float, nullable=False)

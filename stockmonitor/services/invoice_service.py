@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from ..extensions import db
 from ..models import Invoice, InvoiceEntry, Product
 from ..pdf_parsers import registry
+from .metro_image_service import fetch_metro_image_url
 
 
 def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
@@ -48,6 +49,7 @@ def parse_and_store_invoice(
         if product is None:
             product = Product(
                 article_id=parsed_entry.article_id,
+                ean=parsed_entry.ean,
                 shop=parsed.parser_type,
                 source_name=parsed_entry.product_name,
                 pack_size=parsed_entry.colisage,
@@ -56,15 +58,26 @@ def parse_and_store_invoice(
             db.session.add(product)
             db.session.flush()
         else:
+            if parsed_entry.ean:
+                product.ean = parsed_entry.ean
             product.shop = parsed.parser_type
             product.source_name = parsed_entry.product_name
             product.pack_size = parsed_entry.colisage
             product.latest_unit_price = round(parsed_entry.unit_price * parsed_entry.colisage, 3)
 
+        if not product.image_url and parsed_entry.ean:
+            try:
+                resolved_url = fetch_metro_image_url(parsed_entry.ean)
+            except Exception:
+                resolved_url = None
+            if resolved_url:
+                product.image_url = resolved_url
+
         entry = InvoiceEntry(
             invoice_id=invoice.id,
             product_id=product.id,
             article_id=parsed_entry.article_id,
+            ean=parsed_entry.ean,
             quantity=parsed_entry.quantity,
             colisage=parsed_entry.colisage,
             unit_price=parsed_entry.unit_price,

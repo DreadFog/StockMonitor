@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 
+{% set mobile = current_user and current_user.mobile_view %}
+
 {% block content %}
 <section class="card">
   <h1>Shopping List</h1>
-  <p>Estimated total based on latest known prices: <strong>{{ "%.2f"|format(estimated_total) }} €</strong></p>
+  <p>Estimated total based on latest known prices: <strong>{{ "%.2f"|format(estimated_total) }} &euro;</strong></p>
   <form method="post" action="{{ url_for('web.cart_empty') }}" onsubmit="return confirm('Empty the full cart?');">
     <button class="btn ghost" type="submit">Empty Cart</button>
   </form>
@@ -17,24 +19,37 @@
   </form>
 
   {% if product_results %}
-  <table>
+  {% if results_are_suggestions %}<h3>Favourites</h3>{% endif %}
+  <table class="{% if mobile %}mobile-table{% endif %}">
     <thead>
-      <tr><th>Shop</th><th>Product</th><th>Latest Price</th><th>Add</th></tr>
+      <tr>
+        <th></th>
+        {% if not mobile %}<th>Shop</th>{% endif %}
+        <th>Product</th>
+        <th>Latest Price</th>
+        <th></th>
+      </tr>
     </thead>
     <tbody>
       {% for product in product_results %}
       <tr>
-        <td>{{ product.shop or '-' }}</td>
-        <td>
-          {{ product.natural_name or product.source_name }} ({{ product.article_id }})
-          {% if product.pack_size and product.pack_size > 1 %}<small class="muted">&nbsp;pack×{{ product.pack_size }}</small>{% endif %}
+        <td class="product-thumb-cell">
+          {% if product.image_url or product.ean %}
+            <img class="product-thumb {% if mobile %}product-thumb-large{% endif %}" src="{{ url_for('web.product_image', product_id=product.id) }}" alt="" loading="lazy" onerror="this.style.display='none'">
+          {% endif %}
         </td>
-        <td>{{ "%.3f"|format(product.latest_unit_price or 0) }} €{% if product.pack_size and product.pack_size > 1 %}<small class="muted">&nbsp;/pack</small>{% endif %}</td>
+        {% if not mobile %}<td>{{ product.shop or '-' }}</td>{% endif %}
         <td>
-          <form method="post" action="{{ url_for('web.cart_add') }}" class="inline-form">
+          {{ product.natural_name or product.source_name }}
+          {% if not mobile %} ({{ product.article_id }}){% endif %}
+          {% if not mobile and product.pack_size and product.pack_size > 1 %}<small class="muted">&nbsp;pack&times;{{ product.pack_size }}</small>{% endif %}
+        </td>
+        <td>{{ "%.3f"|format(product.latest_unit_price or 0) }} &euro;{% if not mobile and product.pack_size and product.pack_size > 1 %}<small class="muted">&nbsp;/pack</small>{% endif %}</td>
+        <td>
+          <form method="post" action="{{ url_for('web.cart_add') }}" class="add-strip">
             <input type="hidden" name="product_id" value="{{ product.id }}">
-            <input type="number" name="quantity" step="0.001" min="0.001" value="1" required>
-            <button class="btn" type="submit">Add</button>
+            <input class="add-qty" type="number" name="quantity" step="1" min="1" value="1" required>
+            <button class="btn add-btn" type="submit">+</button>
           </form>
         </td>
       </tr>
@@ -48,24 +63,38 @@
   {% for group in shop_groups %}
   <section class="card">
     <h2>{{ group["shop"] }}</h2>
-    <p>Expected total for this shop: <strong>{{ "%.2f"|format(group["subtotal"]) }} €</strong></p>
-    <table>
+    <p>Expected total for this shop: <strong>{{ "%.2f"|format(group["subtotal"]) }} &euro;</strong></p>
+    <table class="{% if mobile %}mobile-table{% endif %}">
       <thead>
-        <tr><th>Name</th><th>Qty</th><th>Unit Price</th><th>Total</th><th></th></tr>
+        <tr>
+          <th></th>
+          <th>Name</th>
+          {% if not mobile %}<th>Qty</th><th>Unit Price</th><th>Total</th>{% else %}<th>Price</th>{% endif %}
+          <th></th>
+        </tr>
       </thead>
       <tbody>
         {% for item in group["items"] %}
         <tr>
+          <td class="product-thumb-cell">
+            {% if item.product.image_url or item.product.ean %}
+              <img class="product-thumb {% if mobile %}product-thumb-large{% endif %}" src="{{ url_for('web.product_image', product_id=item.product.id) }}" alt="" loading="lazy" onerror="this.style.display='none'">
+            {% endif %}
+          </td>
           <td>
             {{ item.product.natural_name or item.product.source_name }}
-            {% if item.product.pack_size and item.product.pack_size > 1 %}<small class="muted">&nbsp;(pack×{{ item.product.pack_size }})</small>{% endif %}
+            {% if not mobile and item.product.pack_size and item.product.pack_size > 1 %}<small class="muted">&nbsp;(pack&times;{{ item.product.pack_size }})</small>{% endif %}
           </td>
+          {% if not mobile %}
           <td>{{ item.quantity }}</td>
-          <td>{{ "%.3f"|format(item.unit_price_snapshot) }} €{% if item.product.pack_size and item.product.pack_size > 1 %}<small class="muted">&nbsp;/pack</small>{% endif %}</td>
-          <td>{{ "%.2f"|format(item.quantity * item.unit_price_snapshot) }} €</td>
+          <td>{{ "%.3f"|format(item.unit_price_snapshot) }} &euro;{% if item.product.pack_size and item.product.pack_size > 1 %}<small class="muted">&nbsp;/pack</small>{% endif %}</td>
+          <td>{{ "%.2f"|format(item.quantity * item.unit_price_snapshot) }} &euro;</td>
+          {% else %}
+          <td>{{ "%.3f"|format(item.unit_price_snapshot) }} &euro;</td>
+          {% endif %}
           <td>
             <form method="post" action="{{ url_for('web.cart_remove', item_id=item.id) }}">
-              <button class="btn ghost" type="submit">Remove</button>
+              <button class="btn ghost remove-btn" type="submit" title="Remove">&#10005;</button>
             </form>
           </td>
         </tr>

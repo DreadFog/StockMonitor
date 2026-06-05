@@ -11,6 +11,7 @@ class ParsedEntry:
     colisage: float
     unit_price: float
     total_price: float
+    ean: str | None = None
 
 
 @dataclass

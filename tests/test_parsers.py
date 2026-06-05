@@ -22,6 +22,7 @@ MM EAN Numéro Désignation Régie Vol VAP Poids Prix Qté Montant TVA Promo Ext
 
     heineken = parsed.entries[0]
     assert heineken.article_id == "2017291"
+    assert heineken.ean == "3119780268276"
     assert heineken.colisage == 20
     assert heineken.quantity == 1
     assert heineken.unit_price == 0.553
@@ -29,6 +30,7 @@ MM EAN Numéro Désignation Régie Vol VAP Poids Prix Qté Montant TVA Promo Ext
 
     atlantiq = parsed.entries[1]
     assert atlantiq.article_id == "2155737"
+    assert atlantiq.ean == "3211200347681"
     assert atlantiq.colisage == 6
     assert atlantiq.quantity == 1
     assert atlantiq.unit_price == 2.49
@@ -57,6 +59,7 @@ EMMENTAL RAPE Francais/S  Grancoeur, 1kgFGRAPP 1 60,00 6,000101
 
     # qty=6 packs of colisage=1 → total 43.08
     tomate = by_article["EBLETA"]
+    assert tomate.ean is None
     assert tomate.quantity == 6
     assert tomate.colisage == 1
     assert tomate.unit_price == 7.180

@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% set mobile = current_user and current_user.mobile_view %}
+
 {% block content %}
 <section class="card">
   <h1>Products</h1>
@@ -10,29 +12,50 @@
 </section>
 
 <section class="card">
-  <table>
+  <table class="product-list-table{% if mobile %} mobile-table{% endif %}">
     <thead>
       <tr>
-        <th>Article ID</th>
-        <th>Shop</th>
+        <th></th>
+        {% if not mobile %}<th>Article ID</th><th>Shop</th>{% endif %}
         <th>Name</th>
         <th>Latest Price</th>
-        <th></th>
+        <th class="star-ribbon-th"></th>
       </tr>
     </thead>
     <tbody>
     {% for product in products %}
-      <tr>
+      <tr class="product-row" data-href="{{ url_for('web.product_detail', product_id=product.id) }}">
+        <td class="product-thumb-cell">
+          {% if product.image_url or product.ean %}
+            <img class="product-thumb {% if mobile %}product-thumb-large{% endif %}" src="{{ url_for('web.product_image', product_id=product.id) }}" alt="" loading="lazy" onerror="this.style.display='none'">
+          {% endif %}
+        </td>
+        {% if not mobile %}
         <td>{{ product.article_id }}</td>
         <td>{{ product.shop or '-' }}</td>
+        {% endif %}
         <td>{{ product.natural_name or product.source_name }}</td>
-        <td>{{ "%.3f"|format(product.latest_unit_price or 0) }} €</td>
-        <td><a href="{{ url_for('web.product_detail', product_id=product.id) }}">Details</a></td>
+        <td>{{ "%.3f"|format(product.latest_unit_price or 0) }} &euro;</td>
+        <td class="star-ribbon-cell">
+          <form method="post" action="{{ url_for('web.toggle_star', product_id=product.id) }}">
+            <input type="hidden" name="next" value="{{ request.full_path }}">
+            <button type="submit" class="star-ribbon{% if product.starred %} starred{% endif %}" title="{% if product.starred %}Unstar{% else %}Star{% endif %}">&#9733;</button>
+          </form>
+        </td>
       </tr>
     {% else %}
-      <tr><td colspan="5">No products yet.</td></tr>
+      <tr><td colspan="{% if mobile %}4{% else %}6{% endif %}">No products yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </section>
+
+<script>
+  document.querySelectorAll('tr.product-row[data-href]').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+      if (e.target.closest('.star-ribbon-cell')) return;
+      window.location = row.dataset.href;
+    });
+  });
+</script>
 {% endblock %}

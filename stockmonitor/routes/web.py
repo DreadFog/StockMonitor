@@ -8,6 +8,11 @@ from ..extensions import db
 from ..models import Cart, CartItem, Invoice, InvoiceEntry, Product, User
 from ..pdf_parsers import registry as parser_registry
 from ..services.invoice_service import delete_invoice_and_recalculate, parse_and_store_invoice
+from ..services.metro_image_service import (
+    cached_image_path,
+    ensure_cached_image,
+    fetch_metro_image_url,
+)
 
 web_bp = Blueprint("web", __name__)
 
@@ -137,8 +142,27 @@ def products():
                 Product.natural_name.ilike(like),
             )
         )
-    products_data = q.order_by(Product.article_id.asc()).all()
+    products_data = q.order_by(Product.starred.desc(), Product.article_id.asc()).all()
     return render_template("products.html", products=products_data, query=query)
+
+
+@web_bp.post("/products/<int:product_id>/toggle-star")
+@require_login
+def toggle_star(product_id: int):
+    product = Product.query.get_or_404(product_id)
+    product.starred = not bool(product.starred)
+    db.session.commit()
+    next_url = request.form.get("next") or url_for("web.products")
+    return redirect(next_url)
+
+
+@web_bp.post("/me/toggle-mobile-view")
+@require_login
+def toggle_mobile_view():
+    g.current_user.mobile_view = not bool(g.current_user.mobile_view)
+    db.session.commit()
+    next_url = request.form.get("next") or url_for("web.dashboard")
+    return redirect(next_url)
 
 
 @web_bp.post("/products/<int:product_id>/rename")
@@ -175,6 +199,43 @@ def product_detail(product_id: int):
     return render_template("product_detail.html", product=product, entries=entries, timeline=timeline)
 
 
+@web_bp.get("/products/<int:product_id>/image")
+@require_login
+def product_image(product_id: int):
+    product = Product.query.get_or_404(product_id)
+
+    # Lazy backfill: if we don't yet know the URL but we have an EAN, try once.
+    if not product.image_url and product.ean:
+        resolved_url = fetch_metro_image_url(product.ean)
+        if resolved_url:
+            product.image_url = resolved_url
+            db.session.commit()
+
+    if not product.image_url:
+        return Response(status=404)
+
+    cached_path = ensure_cached_image(product.image_url)
+    if cached_path is None:
+        return Response(status=502)
+
+    mime = "image/png"
+    lower = cached_path.lower()
+    if lower.endswith((".jpg", ".jpeg")):
+        mime = "image/jpeg"
+    elif lower.endswith(".webp"):
+        mime = "image/webp"
+    elif lower.endswith(".gif"):
+        mime = "image/gif"
+
+    with open(cached_path, "rb") as handle:
+        data = handle.read()
+    return Response(
+        data,
+        mimetype=mime,
+        headers={"Cache-Control": "public, max-age=2592000, immutable"},
+    )
+
+
 @web_bp.get("/cart")
 @require_login
 def cart_page():
@@ -191,10 +252,17 @@ def cart_page():
                     Product.natural_name.ilike(like),
                 )
             )
-            .order_by(Product.shop.asc().nullslast(), Product.article_id.asc())
+            .order_by(Product.starred.desc(), Product.shop.asc().nullslast(), Product.article_id.asc())
             .limit(20)
             .all()
         )
+    else:
+        product_results = (
+            Product.query.filter(Product.starred.is_(True))
+            .order_by(Product.shop.asc().nullslast(), Product.article_id.asc())
+            .all()
+        )
+    results_are_suggestions = not search and bool(product_results)
 
     estimated_total = sum(item.quantity * item.unit_price_snapshot for item in cart.items)
     grouped_items: dict[str, list[CartItem]] = defaultdict(list)
@@ -217,6 +285,7 @@ def cart_page():
         estimated_total=estimated_total,
         search=search,
         product_results=product_results,
+        results_are_suggestions=results_are_suggestions,
     )
 
 

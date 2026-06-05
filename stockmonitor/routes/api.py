@@ -21,6 +21,7 @@ def _invoice_to_dict(invoice: Invoice):
             {
                 "id": e.id,
                 "article_id": e.article_id,
+                "ean": e.ean,
                 "product_id": e.product_id,
                 "shop": e.product.shop,
                 "product_name": e.product.natural_name or e.product.source_name,
@@ -133,9 +134,11 @@ def list_products():
             {
                 "id": p.id,
                 "article_id": p.article_id,
+                "ean": p.ean,
                 "shop": p.shop,
                 "source_name": p.source_name,
                 "natural_name": p.natural_name,
+                "image_url": p.image_url,
                 "latest_price": p.latest_unit_price,
             }
             for p in products
@@ -169,8 +172,10 @@ def product_history(product_id: int):
             "product": {
                 "id": product.id,
                 "article_id": product.article_id,
+                "ean": product.ean,
                 "name": product.natural_name or product.source_name,
                 "pack_size": product.pack_size,
+                "image_url": product.image_url,
                 "latest_price": product.latest_unit_price,
             },
             "history": [
