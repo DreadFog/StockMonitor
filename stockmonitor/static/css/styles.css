@@ -137,6 +137,14 @@ input {
   background: #fff;
 }
 
+select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+  font-size: 1rem;
+  background: #fff;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -196,6 +204,14 @@ td {
 .star-ribbon-th {
   width: 40px;
   padding: 0;
+}
+
+.row-action-th {
+  width: 56px;
+}
+
+.row-action-cell {
+  width: 56px;
 }
 
 .star-ribbon-cell {
@@ -297,6 +313,12 @@ td {
   flex-wrap: wrap;
 }
 
+.product-image-wrap {
+  position: relative;
+  width: 200px;
+  height: 200px;
+}
+
 .product-hero .product-image {
   width: 200px;
   height: 200px;
@@ -305,6 +327,28 @@ td {
   background: #fff;
   border: 1px solid var(--line);
   flex-shrink: 0;
+}
+
+.image-overlay-actions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+}
+
+.product-image-wrap:hover .image-overlay-actions {
+  opacity: 1;
+}
+
+.image-overlay-btn {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: transparent;
 }
 
 .product-hero-body {

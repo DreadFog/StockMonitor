@@ -1,7 +1,10 @@
 from collections import defaultdict
+import os
+from uuid import uuid4
 
-from flask import Blueprint, Response, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, current_app, flash, g, redirect, render_template, request, send_file, session, url_for
 from sqlalchemy import func, or_
+from werkzeug.utils import secure_filename
 
 from ..auth import issue_token, require_login, verify_password
 from ..extensions import db
@@ -16,6 +19,8 @@ from ..services.metro_image_service import (
 
 web_bp = Blueprint("web", __name__)
 
+_ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
+
 
 def _active_cart_for_user(user_id: int) -> Cart:
     cart = Cart.query.filter_by(user_id=user_id, status="active").first()
@@ -24,6 +29,78 @@ def _active_cart_for_user(user_id: int) -> Cart:
         db.session.add(cart)
         db.session.commit()
     return cart
+
+
+def _safe_float(value: str | None, fallback: float | None = None) -> float | None:
+    if value is None:
+        return fallback
+    value = value.strip()
+    if not value:
+        return fallback
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _custom_image_dir() -> str:
+    path = os.path.join(current_app.instance_path, "product_images", "custom")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def _delete_custom_image_file(filename: str | None) -> None:
+    if not filename:
+        return
+    path = os.path.join(_custom_image_dir(), filename)
+    if os.path.isfile(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+def _is_allowed_image(filename: str) -> bool:
+    if "." not in filename:
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in _ALLOWED_IMAGE_EXTENSIONS
+
+
+def _save_custom_product_image(product: Product, uploaded_file) -> bool:
+    if not uploaded_file or not uploaded_file.filename:
+        return False
+    cleaned = secure_filename(uploaded_file.filename)
+    if not cleaned or not _is_allowed_image(cleaned):
+        return False
+    ext = cleaned.rsplit(".", 1)[1].lower()
+    new_filename = f"product_{product.id}_{uuid4().hex[:10]}.{ext}"
+    target_path = os.path.join(_custom_image_dir(), new_filename)
+    uploaded_file.save(target_path)
+
+    old_filename = product.custom_image_filename
+    product.custom_image_filename = new_filename
+    product.image_url = None
+    _delete_custom_image_file(old_filename)
+    return True
+
+
+def _build_custom_article_id(name: str) -> str:
+    slug = "".join(ch for ch in name.lower().strip() if ch.isalnum())[:12] or "item"
+    return f"custom-{slug}-{uuid4().hex[:6]}"
+
+
+def _default_image_path() -> str | None:
+    static_root = current_app.static_folder or ""
+    candidates = (
+        os.path.join(static_root, "images", "default_image.png"),
+        os.path.join(static_root, "images", "default_image.jpg"),
+        os.path.join(static_root, "images", "default_image.jpeg"),
+    )
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return None
 
 
 @web_bp.get("/login")
@@ -132,6 +209,22 @@ def delete_invoice_page(invoice_id: int):
 @require_login
 def products():
     query = request.args.get("q", "").strip()
+    per_page_raw = (request.args.get("per_page") or "10").strip()
+    try:
+        per_page = int(per_page_raw)
+    except ValueError:
+        per_page = 10
+    if per_page not in (10, 20, 50):
+        per_page = 10
+
+    page_raw = (request.args.get("page") or "1").strip()
+    try:
+        page = int(page_raw)
+    except ValueError:
+        page = 1
+    if page < 1:
+        page = 1
+
     q = Product.query
     if query:
         like = f"%{query}%"
@@ -142,8 +235,95 @@ def products():
                 Product.natural_name.ilike(like),
             )
         )
-    products_data = q.order_by(Product.starred.desc(), Product.article_id.asc()).all()
-    return render_template("products.html", products=products_data, query=query)
+    pagination = q.order_by(Product.starred.desc(), Product.article_id.asc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False,
+    )
+    return render_template(
+        "products.html",
+        products=pagination.items,
+        query=query,
+        per_page=per_page,
+        page=page,
+        total_pages=pagination.pages,
+        has_prev=pagination.has_prev,
+        has_next=pagination.has_next,
+        prev_num=pagination.prev_num,
+        next_num=pagination.next_num,
+        total_items=pagination.total,
+    )
+
+
+@web_bp.get("/products/new")
+@require_login
+def new_custom_product():
+    return render_template("product_new.html")
+
+
+@web_bp.post("/products/create")
+@require_login
+def create_custom_product():
+    next_url = request.form.get("next") or url_for("web.products")
+    source_name = (request.form.get("source_name") or "").strip()
+    shop = (request.form.get("shop") or "").strip()
+    price = _safe_float(request.form.get("latest_unit_price"), None)
+    if not source_name or not shop or price is None or price <= 0:
+        flash("Name, shop, and latest price are required", "error")
+        return redirect(next_url)
+
+    article_id = (request.form.get("article_id") or "").strip()
+    if not article_id:
+        article_id = _build_custom_article_id(source_name)
+
+    if Product.query.filter_by(article_id=article_id).first() is not None:
+        flash("Article ID already exists. Please choose another one.", "error")
+        return redirect(next_url)
+
+    pack_size = _safe_float(request.form.get("pack_size"), 1.0) or 1.0
+    if pack_size <= 0:
+        pack_size = 1.0
+
+    product = Product(
+        article_id=article_id,
+        ean=(request.form.get("ean") or "").strip() or None,
+        shop=shop,
+        source_name=source_name,
+        natural_name=(request.form.get("natural_name") or "").strip() or None,
+        pack_size=pack_size,
+        image_url=(request.form.get("image_url") or "").strip() or None,
+        starred=request.form.get("starred") == "on",
+        latest_unit_price=price,
+    )
+    db.session.add(product)
+    db.session.commit()
+    flash("Custom item added", "success")
+    return redirect(url_for("web.product_detail", product_id=product.id))
+
+
+@web_bp.post("/products/<int:product_id>/delete")
+@require_login
+def delete_product(product_id: int):
+    product = Product.query.get_or_404(product_id)
+    entry_count = InvoiceEntry.query.filter_by(product_id=product.id).count()
+    if entry_count > 0:
+        flash("Cannot delete this product because it is referenced by invoices", "error")
+        next_url = request.form.get("next") or url_for("web.product_detail", product_id=product.id)
+        return redirect(next_url)
+
+    CartItem.query.filter_by(product_id=product.id).delete()
+    _delete_custom_image_file(product.custom_image_filename)
+    if product.image_url:
+        cached_path = cached_image_path(product.image_url)
+        if os.path.isfile(cached_path):
+            try:
+                os.remove(cached_path)
+            except OSError:
+                pass
+    db.session.delete(product)
+    db.session.commit()
+    flash("Product deleted", "success")
+    return redirect(url_for("web.products"))
 
 
 @web_bp.post("/products/<int:product_id>/toggle-star")
@@ -199,10 +379,49 @@ def product_detail(product_id: int):
     return render_template("product_detail.html", product=product, entries=entries, timeline=timeline)
 
 
+@web_bp.post("/products/<int:product_id>/image/upload")
+@require_login
+def upload_product_image(product_id: int):
+    product = Product.query.get_or_404(product_id)
+    uploaded = request.files.get("image_file")
+    if not _save_custom_product_image(product, uploaded):
+        flash("Invalid image file. Allowed: png, jpg, jpeg, webp, gif", "error")
+        return redirect(url_for("web.product_detail", product_id=product.id))
+    db.session.commit()
+    flash("Image updated", "success")
+    return redirect(url_for("web.product_detail", product_id=product.id))
+
+
+@web_bp.post("/products/<int:product_id>/image/remove")
+@require_login
+def remove_product_image(product_id: int):
+    product = Product.query.get_or_404(product_id)
+    _delete_custom_image_file(product.custom_image_filename)
+    product.custom_image_filename = None
+    if product.image_url:
+        cached_path = cached_image_path(product.image_url)
+        if os.path.isfile(cached_path):
+            try:
+                os.remove(cached_path)
+            except OSError:
+                pass
+    product.image_url = None
+    db.session.commit()
+    flash("Image removed", "success")
+    return redirect(url_for("web.product_detail", product_id=product.id))
+
+
 @web_bp.get("/products/<int:product_id>/image")
 @require_login
 def product_image(product_id: int):
     product = Product.query.get_or_404(product_id)
+
+    if product.custom_image_filename:
+        custom_path = os.path.join(_custom_image_dir(), product.custom_image_filename)
+        if os.path.isfile(custom_path):
+            return send_file(custom_path)
+        product.custom_image_filename = None
+        db.session.commit()
 
     # Lazy backfill: if we don't yet know the URL but we have an EAN, try once.
     if not product.image_url and product.ean:
@@ -212,28 +431,19 @@ def product_image(product_id: int):
             db.session.commit()
 
     if not product.image_url:
+        default_path = _default_image_path()
+        if default_path:
+            return send_file(default_path)
         return Response(status=404)
 
     cached_path = ensure_cached_image(product.image_url)
     if cached_path is None:
+        default_path = _default_image_path()
+        if default_path:
+            return send_file(default_path)
         return Response(status=502)
 
-    mime = "image/png"
-    lower = cached_path.lower()
-    if lower.endswith((".jpg", ".jpeg")):
-        mime = "image/jpeg"
-    elif lower.endswith(".webp"):
-        mime = "image/webp"
-    elif lower.endswith(".gif"):
-        mime = "image/gif"
-
-    with open(cached_path, "rb") as handle:
-        data = handle.read()
-    return Response(
-        data,
-        mimetype=mime,
-        headers={"Cache-Control": "public, max-age=2592000, immutable"},
-    )
+    return send_file(cached_path)
 
 
 @web_bp.get("/cart")

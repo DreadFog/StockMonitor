@@ -24,6 +24,7 @@ class Product(db.Model):
     natural_name = db.Column(db.String(255), nullable=True)
     pack_size = db.Column(db.Float, nullable=False, default=1)
     image_url = db.Column(db.String(500), nullable=True)
+    custom_image_filename = db.Column(db.String(255), nullable=True)
     starred = db.Column(db.Boolean, nullable=False, default=False, index=True)
     latest_unit_price = db.Column(db.Float, nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

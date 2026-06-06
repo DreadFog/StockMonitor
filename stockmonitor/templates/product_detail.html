@@ -2,9 +2,20 @@
 
 {% block content %}
 <section class="card product-hero">
-  {% if product.image_url or product.ean %}
-  <img class="product-image" src="{{ url_for('web.product_image', product_id=product.id) }}" alt="" loading="lazy" onerror="this.style.display='none'">
-  {% endif %}
+  <div class="product-image-wrap">
+    <a href="{{ url_for('web.product_image', product_id=product.id) }}" target="_blank" rel="noopener noreferrer">
+      <img class="product-image" src="{{ url_for('web.product_image', product_id=product.id) }}" alt="Product image" loading="lazy">
+    </a>
+    <div class="image-overlay-actions">
+      <form method="post" action="{{ url_for('web.upload_product_image', product_id=product.id) }}" enctype="multipart/form-data">
+        <input id="image-file-{{ product.id }}" type="file" name="image_file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onchange="this.form.submit()">
+        <button type="button" class="btn ghost image-overlay-btn" onclick="document.getElementById('image-file-{{ product.id }}').click();">Edit</button>
+      </form>
+      <form method="post" action="{{ url_for('web.remove_product_image', product_id=product.id) }}">
+        <button type="submit" class="btn ghost image-overlay-btn" onclick="return confirm('Remove this image?');">Remove</button>
+      </form>
+    </div>
+  </div>
   <div class="product-hero-body">
     <h1>
       {{ product.natural_name or product.source_name }}
@@ -28,6 +39,11 @@
       <button class="btn ghost" type="submit">
         {% if product.starred %}&#9733; Unstar{% else %}&#9734; Star{% endif %}
       </button>
+    </form>
+
+    <form method="post" action="{{ url_for('web.delete_product', product_id=product.id) }}" class="inline-form" onsubmit="return confirm('Delete this product?');">
+      <input type="hidden" name="next" value="{{ url_for('web.products') }}">
+      <button class="btn ghost remove-btn" type="submit">Delete Product</button>
     </form>
   </div>
 </section>

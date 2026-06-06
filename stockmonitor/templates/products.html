@@ -7,7 +7,15 @@
   <h1>Products</h1>
   <form method="get" class="inline-form">
     <input type="text" name="q" value="{{ query }}" placeholder="Search by name or article ID">
+    <label>Per page
+      <select name="per_page">
+        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+        <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+      </select>
+    </label>
     <button type="submit" class="btn">Search</button>
+    <a class="btn ghost" href="{{ url_for('web.new_custom_product') }}">Add Custom Item</a>
   </form>
 </section>
 
@@ -19,6 +27,7 @@
         {% if not mobile %}<th>Article ID</th><th>Shop</th>{% endif %}
         <th>Name</th>
         <th>Latest Price</th>
+        <th class="row-action-th"></th>
         <th class="star-ribbon-th"></th>
       </tr>
     </thead>
@@ -26,9 +35,7 @@
     {% for product in products %}
       <tr class="product-row" data-href="{{ url_for('web.product_detail', product_id=product.id) }}">
         <td class="product-thumb-cell">
-          {% if product.image_url or product.ean %}
-            <img class="product-thumb {% if mobile %}product-thumb-large{% endif %}" src="{{ url_for('web.product_image', product_id=product.id) }}" alt="" loading="lazy" onerror="this.style.display='none'">
-          {% endif %}
+          <img class="product-thumb {% if mobile %}product-thumb-large{% endif %}" src="{{ url_for('web.product_image', product_id=product.id) }}" alt="" loading="lazy">
         </td>
         {% if not mobile %}
         <td>{{ product.article_id }}</td>
@@ -36,6 +43,12 @@
         {% endif %}
         <td>{{ product.natural_name or product.source_name }}</td>
         <td>{{ "%.3f"|format(product.latest_unit_price or 0) }} &euro;</td>
+        <td class="row-action-cell">
+          <form method="post" action="{{ url_for('web.delete_product', product_id=product.id) }}" onsubmit="return confirm('Delete this product?');">
+            <input type="hidden" name="next" value="{{ request.full_path }}">
+            <button type="submit" class="btn ghost remove-btn" title="Delete">&#10005;</button>
+          </form>
+        </td>
         <td class="star-ribbon-cell">
           <form method="post" action="{{ url_for('web.toggle_star', product_id=product.id) }}">
             <input type="hidden" name="next" value="{{ request.full_path }}">
@@ -44,16 +57,28 @@
         </td>
       </tr>
     {% else %}
-      <tr><td colspan="{% if mobile %}4{% else %}6{% endif %}">No products yet.</td></tr>
+      <tr><td colspan="{% if mobile %}5{% else %}7{% endif %}">No products yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </section>
 
+<section class="card">
+  <div class="inline-form">
+    <span>Page {{ page }}{% if total_pages %} / {{ total_pages }}{% else %} / 1{% endif %} ({{ total_items }} items)</span>
+    {% if has_prev %}
+      <a class="btn ghost" href="{{ url_for('web.products', q=query, per_page=per_page, page=prev_num) }}">Previous</a>
+    {% endif %}
+    {% if has_next %}
+      <a class="btn ghost" href="{{ url_for('web.products', q=query, per_page=per_page, page=next_num) }}">Next</a>
+    {% endif %}
+  </div>
+</section>
+
 <script>
   document.querySelectorAll('tr.product-row[data-href]').forEach(function(row) {
     row.addEventListener('click', function(e) {
-      if (e.target.closest('.star-ribbon-cell')) return;
+      if (e.target.closest('.star-ribbon-cell') || e.target.closest('.row-action-cell')) return;
       window.location = row.dataset.href;
     });
   });

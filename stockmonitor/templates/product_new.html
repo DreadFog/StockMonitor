@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <h1>Add Custom Item</h1>
+  <form method="post" action="{{ url_for('web.create_custom_product') }}" class="stack">
+    <input type="hidden" name="next" value="{{ url_for('web.new_custom_product') }}">
+
+    <div class="inline-form">
+      <input type="text" name="source_name" placeholder="Name*" required>
+      <input type="number" name="latest_unit_price" placeholder="Latest price*" step="0.001" min="0.001" required>
+      <input type="text" name="shop" placeholder="Shop*" required>
+      <input type="text" name="article_id" placeholder="Article ID (optional)">
+      <input type="text" name="natural_name" placeholder="Natural name (optional)">
+    </div>
+
+    <div class="inline-form">
+      <input type="text" name="ean" placeholder="EAN (optional)">
+      <input type="number" name="pack_size" placeholder="Pack size (optional)" step="0.001" min="0.001">
+      <input type="url" name="image_url" placeholder="Image URL (optional)">
+      <label class="inline-form"><input type="checkbox" name="starred"> Starred</label>
+    </div>
+
+    <div class="inline-form">
+      <button type="submit" class="btn">Create</button>
+      <a class="btn ghost" href="{{ url_for('web.products') }}">Back to Products</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

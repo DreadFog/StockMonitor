@@ -42,6 +42,12 @@ def _ensure_runtime_schema():
             db.session.commit()
         except SQLAlchemyError:
             db.session.rollback()
+    if "custom_image_filename" not in product_columns:
+        try:
+            db.session.execute(text("ALTER TABLE products ADD COLUMN custom_image_filename VARCHAR(255)"))
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
     if "starred" not in product_columns:
         try:
             db.session.execute(text("ALTER TABLE products ADD COLUMN starred BOOLEAN NOT NULL DEFAULT 0"))

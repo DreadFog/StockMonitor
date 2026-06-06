@@ -34,9 +34,7 @@
       {% for product in product_results %}
       <tr>
         <td class="product-thumb-cell">
-          {% if product.image_url or product.ean %}
-            <img class="product-thumb {% if mobile %}product-thumb-large{% endif %}" src="{{ url_for('web.product_image', product_id=product.id) }}" alt="" loading="lazy" onerror="this.style.display='none'">
-          {% endif %}
+          <img class="product-thumb {% if mobile %}product-thumb-large{% endif %}" src="{{ url_for('web.product_image', product_id=product.id) }}" alt="" loading="lazy">
         </td>
         {% if not mobile %}<td>{{ product.shop or '-' }}</td>{% endif %}
         <td>
@@ -77,9 +75,7 @@
         {% for item in group["items"] %}
         <tr>
           <td class="product-thumb-cell">
-            {% if item.product.image_url or item.product.ean %}
-              <img class="product-thumb {% if mobile %}product-thumb-large{% endif %}" src="{{ url_for('web.product_image', product_id=item.product.id) }}" alt="" loading="lazy" onerror="this.style.display='none'">
-            {% endif %}
+            <img class="product-thumb {% if mobile %}product-thumb-large{% endif %}" src="{{ url_for('web.product_image', product_id=item.product.id) }}" alt="" loading="lazy">
           </td>
           <td>
             {{ item.product.natural_name or item.product.source_name }}
